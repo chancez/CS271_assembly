@@ -82,7 +82,14 @@ remainder:  .word   0
 
     # compute product, store in product
     mul  $t2, $t0, $t1
-    sw   $t2, difference
+    sw   $t2, product
+
+    # compute quotient and remainder
+    div  $t0, $t1
+    mflo $t2
+    sw   $t2, quotient
+    mfhi $t2
+    sw   $t2, remainder
 
 # Section 4: Print computed values that are stored in data segment
 # Pseudocode:
@@ -92,24 +99,54 @@ remainder:  .word   0
 #   print quotient
 #   print remainder
 
-    # load print_int syscall into syscall register
-    li  $v0, 1
 
     # print sum
-    #sw  $t0, sum
-    #li  $t2, '+'
-    #sw  $t2, sum + 4
-    #sw  $t1, sum + 8
     lw  $a0, sum
+    # print int
+    li  $v0, 1
+    syscall
+    # new line
+    li  $v0, 11
+    li  $a0, '\n'
     syscall
 
     # print difference
-    #lw  $a0, difference
-    #syscall
+    lw  $a0, difference
+    # print int
+    li  $v0, 1
+    syscall
+    # new line
+    li  $v0, 11
+    li  $a0, '\n'
+    syscall
 
-    ## print product
-    #lw  $a0, product
-    #syscall
+    # print product
+    lw  $a0, product
+    # print int
+    li  $v0, 1
+    syscall
+    # new line
+    li  $v0, 11
+    li  $a0, '\n'
+    syscall
+
+    lw  $a0, quotient
+    # print int
+    li  $v0, 1
+    syscall
+    # new line
+    li  $v0, 11
+    li  $a0, '\n'
+    syscall
+
+    lw  $a0, remainder
+    # print int
+    li  $v0, 1
+    syscall
+    # new line
+    li  $v0, 11
+    li  $a0, '\n'
+    syscall
 
 # Section 5: Print a concluding message and exit
 # Pseudocode: 
