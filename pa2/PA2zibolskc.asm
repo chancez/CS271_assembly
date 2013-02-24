@@ -14,7 +14,7 @@ goodbye: .asciiz "\nGoodbye, "
 
 num_prompt: .ascii  "\nHow many Fibonacci numbers should I display? "
             .asciiz "\nEnter an integer between 1 and 47 (inclusive): "
-num_err:    .asciiz "\nThat number was out of range, try again"
+num_err:    .asciiz "\nThat number was out of range, try again "
 
 spaces:     .asciiz "    "
 nl:         .asciiz "\n"
