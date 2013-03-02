@@ -139,8 +139,17 @@ count_done:
 
         jr $ra
 
-# results()
+# results():
+#   for (i = 'A'; i < 'Z'; i++):
+#       count = freq[i]
+#       print i + ": " + count
+#       print histogram(count) + "\n"
+# $t0: freq
+# $t1: i
 results:
+        # set up stack frame
+        addiu $sp, $sp, -24 # new stack frame
+        sw $ra, 20($sp)     # save return address
 
         la $t0, freq
         li $t1, 'A'
@@ -160,6 +169,18 @@ results_loop:
         li $v0, 1
         syscall
 
+        # store freq and i
+        sw $t0, 16($sp)
+        sw $t1, 12($sp)
+
+        # print histogram
+        # $a0 already contains the count
+        jal histogram
+
+        #restore freq and i
+        lw $t1, 12($sp)
+        lw $t0, 16($sp)
+
         # Print the newline
         li $v0, 11
         li $a0, '\n'
@@ -171,6 +192,31 @@ results_loop:
         addi $t1, $t1, 1
 
         ble $t1, 'Z', results_loop
+# end results_loop
+
+        lw $ra, 20($sp)
+        addiu $sp, $sp, 24  # pop stack frame
 
         jr $ra
 
+
+# histogram(n):
+#   while n > 0:
+#       print 'x'
+#       n = n - 1
+# $a0: n
+# $t0: n
+histogram:
+    move $t0, $a0
+    beqz $t0, hist_end # only print histograms of letters with counts > 0
+    li $v0, 11         # prepare print char syscall
+    li $a0, ' '        # print a space before we begin
+    syscall
+hist_loop:
+    li $a0, 'x'
+    syscall
+
+    subi $t0, $t0, 1
+    bgtz $t0, hist_loop
+hist_end:
+    jr $ra
