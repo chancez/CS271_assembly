@@ -3,16 +3,18 @@
 # without.
 
 .data
-intro:      .asciiz "Chance Zibolski\n
-                    "This program computes fibonacci recursively.\n"
-                    "With memoization, and without.\n"
+intro:      .ascii  "\nChance Zibolski
+            .ascii  "\nThis program computes fibonacci recursively."
+            .asciiz "\nWith memoization, and without.\n"
 
 
 prompt:	.asciiz	"\nEnter an integer in the range [1..25]:"
 error_msg:    .asciiz "\nThat number was out of range, try again."
 
 # memoization table
-memo: .space 100
+memo:   .word 0
+        .word 1
+        .space 100
 
 
 .text
@@ -29,7 +31,7 @@ memo: .space 100
 #       exit()
 
 main:
-    addiu $sp, $sp, -16	# push stack frame
+    addiu $sp, $sp, -20	# push stack frame
 
     li $v0, 4           # print intro
     la $a0, intro
@@ -37,15 +39,26 @@ main:
 
     jal getN
     move $a0, $v0
+    sw $v0, 20($sp) # store n
 
-    jal fib
-    move $a0, $v0
+    jal fib         # call fib(n)
 
-    li $v0, 1
+    move $a0, $v0   # copy result to first arg
+    li $v0, 1       # print result
     syscall
 
+    li $v0, 11
+    li $a0, '\n'
+    syscall
 
-	addiu $sp, $sp, 16	# pop stack frame
+    lw $a0, 20($sp) # restore n
+    jal fibM        # call fibM(n)
+
+    move $a0, $v0   # copy result to first arg
+    li $v0, 1       # print result
+    syscall
+
+	addiu $sp, $sp, 20  # pop stack frame
 	li    $v0, 10		# system exit
 	syscall
 
@@ -105,19 +118,69 @@ fib:
     sw $a0, 20($sp)     # save n since we're making a call
     subi $a0, $a0, 1    # fib(n-1)
     jal fib
-    lw $v0, 24($sp)    # save fib(n-1)
+    sw $v0, 24($sp)    # save fib(n-1)
 
     # fib(n-2)
     lw $a0, 20($sp)     # get n real quick
     subi $a0, $a0, 2    # fib(n-2)
     jal fib
 
-    lw $t0, 24($sp)     # get fib(n-1) back
+    lw $a0, 24($sp)     # get fib(n-1) back
 
-    add $v0, $t0, $v0 # return = fib(n-1) + fib(n-2)
+    add $v0, $a0, $v0   # return = fib(n-1) + fib(n-2)
 
 fib_end:
     lw  $ra, 16($sp)
     addiu, $sp, $sp, 24
     jr $ra
 
+
+
+
+# fibM(n): Calculate and return the nth Fibonacci number using a recursive
+#          algorithm and memoization
+# memo = []
+# int fib(int n):
+#   if memo[n]:
+#       return memo[n]
+#   if n < 2:
+#       memo[n] = n
+#   else:
+#       memo[n] = fib(n-1) + fib(n-2)
+#   return memo[n]
+
+fibM:
+    addiu $sp, $sp, -32
+    sw $ra, 16($sp)
+
+    mul $t0, $a0, 4     # i = n*4
+    lw $v0, memo($t0)   # return = memo[i]
+    bnez $v0, fibM_end  # if memo[i]
+
+    bge $a0, 2, fibM_else  # if n < 2
+    sw $a0, memo($t0)   # memo[n] = n
+    move $v0, $a0       # return memo[n]
+    j fibM_end
+
+fibM_else:
+    sw $a0, 20($sp)     # save n since we're making a call
+    sw $t0, 24($sp)     # save the value of i
+    subi $a0, $a0, 1    # tmp = n-1
+    jal fibM            # fib(tmp)
+    sw $v0, 28($sp)     # save fib(n-1)
+
+    # fib(n-2)
+    lw $a0, 20($sp)     # get n real quick
+    subi $a0, $a0, 2    # tmp = n-2
+    jal fibM            # fib(tmp)
+
+    lw $t0, 24($sp)     # restore i
+    lw $a0, 28($sp)     # restore fib(n-1)
+
+    add $v0, $a0, $v0   # return = fib(n-1) + fib(n-2)
+    sw $v0, memo($t0)   # table[i] = return
+
+fibM_end:
+    lw $ra, 16($sp)
+    addiu $sp, $sp, 32
+    jr $ra
