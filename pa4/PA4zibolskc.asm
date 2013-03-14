@@ -3,13 +3,19 @@
 # without.
 
 .data
-intro:      .ascii  "\nChance Zibolski
+intro:      .ascii  "\nChance Zibolski"
             .ascii  "\nThis program computes fibonacci recursively."
             .asciiz "\nWith memoization, and without.\n"
 
 
-prompt:	.asciiz	"\nEnter an integer in the range [1..25]:"
-error_msg:    .asciiz "\nThat number was out of range, try again."
+prompt:	      .asciiz	"\nEnter an integer in the range [1..25]:"
+error_msg:    .asciiz   "\nThat number was out of range, try again."
+
+
+pure_banner:  .asciiz   "\nPurely Recursive:\n"
+memo_banner:  .asciiz   "\nWith Memoization:\n"
+result:       .asciiz   "Result:"
+time:         .asciiz   "Time:"
 
 # memoization table
 memo:   .word 0
@@ -38,25 +44,23 @@ main:
     syscall
 
     jal getN
-    move $a0, $v0
     sw $v0, 20($sp) # store n
 
-    jal fib         # call fib(n)
-
-    move $a0, $v0   # copy result to first arg
-    li $v0, 1       # print result
+    li $v0, 4
+    la $a0, pure_banner # Prints purely recursive
     syscall
 
-    li $v0, 11
-    li $a0, '\n'
+    la $a0, fib
+    lw $a1, 20($sp) # restore n
+    jal testFib
+
+    li $v0, 4
+    la $a0, memo_banner # Prints purely recursive
     syscall
 
-    lw $a0, 20($sp) # restore n
-    jal fibM        # call fibM(n)
-
-    move $a0, $v0   # copy result to first arg
-    li $v0, 1       # print result
-    syscall
+    la $a0, fibM
+    lw $a1, 20($sp) # restore n
+    jal testFib
 
 	addiu $sp, $sp, 20  # pop stack frame
 	li    $v0, 10		# system exit
@@ -135,8 +139,6 @@ fib_end:
     jr $ra
 
 
-
-
 # fibM(n): Calculate and return the nth Fibonacci number using a recursive
 #          algorithm and memoization
 # memo = []
@@ -183,4 +185,62 @@ fibM_else:
 fibM_end:
     lw $ra, 16($sp)
     addiu $sp, $sp, 32
+    jr $ra
+
+
+# testFib(f, n)
+# void testFib(&func, int n):
+#   start = time()
+#   result = func(n)
+#   stop = time()
+#   delta = stop - start
+#   print "Result:" + result
+#   print "Time":" + delta
+
+testFib:
+    addiu $sp, $sp, -24
+    sw $ra, 16($sp)
+
+    sw $a0, 20($sp)   # store our func pointer temporarily
+    sw $a1, 24($sp)   # store our arg to our func temporarily
+
+    li $v0, 30
+    syscall
+    move $s0, $a0   # start = time()
+
+    lw $t0, 20($sp)
+    lw $a0, 24($sp)
+    jalr $t0        # result = func(n)
+    move $t0, $v0   # store result while we do other stuff
+
+    li $v0, 30
+    syscall
+    move $s1, $a0   # stop = time()
+
+    li $v0, 4           # Printing strings
+    la $a0, result      # print "Result:"
+    syscall
+
+    move $a0, $t0       # move result into arg slot for printing
+    li $v0, 1           # print result
+    syscall
+
+    li $a0, '\n'    # print newline
+    li $v0, 11
+    syscall
+
+    la $a0, time  # print "Time:"
+    li $v0, 4
+    syscall
+
+    sub $a0, $s1, $s0   # delta = stop - start
+    li $v0, 1
+    syscall             # print delta
+
+    li $a0, '\n'        # print newline
+    li $v0, 11
+    syscall
+
+    lw $ra, 16($sp)
+    addiu $sp, $sp, 24
     jr $ra
